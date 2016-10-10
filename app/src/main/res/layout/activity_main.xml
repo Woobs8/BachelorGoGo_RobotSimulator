@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/activity_main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="@dimen/activity_vertical_margin"
+    android:paddingLeft="@dimen/activity_horizontal_margin"
+    android:paddingRight="@dimen/activity_horizontal_margin"
+    android:paddingTop="@dimen/activity_vertical_margin"
+    tools:context="bachelorgogo.com.robotsimulator.MainActivity">
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:inputType="textPersonName"
+        android:ems="10"
+        android:id="@+id/custom_cmd_field"
+        android:layout_below="@+id/custom_cmd_header"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:hint="Input custom command" />
+
+    <Button
+        android:text="Send"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/send_custom_cmd_btn"
+        android:layout_alignTop="@+id/custom_cmd_field"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
+
+    <SeekBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/battery_status_sb"
+        android:layout_below="@+id/battery_status_header"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:max="100"
+        android:progress="100"
+        android:layout_alignRight="@+id/custom_cmd_field"
+        android:layout_alignEnd="@+id/custom_cmd_field" />
+
+    <TextView
+        android:text="Camera Availability"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/camera_availability_header"
+        android:layout_below="@+id/battery_status_sb"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="Status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/send_custom_cmd_btn"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:id="@+id/textView4"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium" />
+
+    <TextView
+        android:text="Battery:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/battery_status_header"
+        android:layout_below="@+id/textView4"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="Control Input:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/textView5"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:id="@+id/textView6" />
+
+    <TextView
+        android:text="Settings:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/coordinate_y_header"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:id="@+id/rcv_settings_header" />
+
+    <Switch
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/camera_availability_header"
+        android:layout_alignRight="@+id/textView6"
+        android:layout_alignEnd="@+id/textView6"
+        android:id="@+id/camera_sw" />
+
+    <Button
+        android:text="Update Status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/update_status_btn"
+        android:layout_below="@+id/camera_sw"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true" />
+
+    <TextView
+        android:text="Received"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView5"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:layout_below="@+id/update_status_btn"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="Power Save Mode: "
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/video_settings_header"
+        android:layout_alignLeft="@+id/device_name_header"
+        android:layout_alignStart="@+id/device_name_header"
+        android:id="@+id/power_save_mode_header" />
+
+    <TextView
+        android:text="Assisted Driving Mode:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/power_save_mode_header"
+        android:layout_alignLeft="@+id/video_settings_header"
+        android:layout_alignStart="@+id/video_settings_header"
+        android:id="@+id/assisted_driving_header" />
+
+    <TextView
+        android:text="Device Name:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/device_name_header"
+        android:layout_below="@+id/rcv_settings_header"
+        android:layout_alignRight="@+id/camera_availability_header"
+        android:layout_alignEnd="@+id/camera_availability_header" />
+
+    <TextView
+        android:text="Video Settings:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/video_settings_header"
+        android:layout_below="@+id/device_name_header"
+        android:layout_alignLeft="@+id/power_save_mode_header"
+        android:layout_alignStart="@+id/power_save_mode_header" />
+
+    <TextView
+        android:text="placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/device_name_txt"
+        android:layout_alignLeft="@+id/device_name_txt"
+        android:layout_alignStart="@+id/device_name_txt"
+        android:id="@+id/video_settings_txt" />
+
+    <TextView
+        android:text="placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/video_settings_txt"
+        android:layout_alignLeft="@+id/video_settings_txt"
+        android:layout_alignStart="@+id/video_settings_txt"
+        android:id="@+id/power_save_mode_txt" />
+
+    <TextView
+        android:text="placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignBottom="@+id/assisted_driving_header"
+        android:layout_alignLeft="@+id/power_save_mode_txt"
+        android:layout_alignStart="@+id/power_save_mode_txt"
+        android:id="@+id/assisted_driving_txt" />
+
+    <TextView
+        android:text="Y:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/coordinate_y_header"
+        android:layout_below="@+id/coordinate_x_header"
+        android:layout_alignLeft="@+id/device_name_header"
+        android:layout_alignStart="@+id/device_name_header" />
+
+    <TextView
+        android:text="X:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/coordinate_x_header"
+        android:layout_below="@+id/textView6"
+        android:layout_alignLeft="@+id/coordinate_y_header"
+        android:layout_alignStart="@+id/coordinate_y_header" />
+
+    <TextView
+        android:text="placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/x_coord_txt"
+        android:layout_toRightOf="@+id/textView4"
+        android:layout_toEndOf="@+id/textView4"
+        android:id="@+id/y_coord_txt" />
+
+    <TextView
+        android:text="placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/x_coord_txt"
+        android:layout_below="@+id/textView6"
+        android:layout_alignLeft="@+id/y_coord_txt"
+        android:layout_alignStart="@+id/y_coord_txt" />
+
+    <TextView
+        android:text="Waiting for connection..."
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_alignLeft="@+id/custom_cmd_header"
+        android:layout_alignStart="@+id/custom_cmd_header"
+        android:id="@+id/connection_status_txt"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:singleLine="true" />
+
+    <TextView
+        android:text="Custom command:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/custom_cmd_header"
+        android:layout_below="@+id/connection_status_txt"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="placeholder"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/device_name_txt"
+        android:layout_above="@+id/video_settings_header"
+        android:layout_toRightOf="@+id/custom_cmd_field"
+        android:layout_toEndOf="@+id/custom_cmd_field" />
+
+</RelativeLayout>
