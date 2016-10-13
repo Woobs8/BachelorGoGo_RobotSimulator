@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.net.NetworkInfo;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
+import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
@@ -25,22 +26,21 @@ import android.widget.TextView;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
-
-    boolean mBound;
+    private final String TAG = "RobotSimulator";
 
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
     BroadcastReceiver mReceiver;
     IntentFilter mIntentFilter;
-    WifiP2pManager.PeerListListener mPeerListListener;
+    WifiP2pDnsSdServiceInfo mServiceInfo;
 
     //UI elements
     Button sendCustomCmd_btn;
@@ -63,7 +63,7 @@ public class MainActivity extends AppCompatActivity {
     private int mLocalPort = 4998;
     private int mHostPort = -1;
 
-
+    private final String mSystemName = "eROTIC";
     private String mDeviceName = "RoboGoGo";
     private String mCustomCmd;
     private String mVideoSettings = "";
@@ -177,12 +177,22 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         // Unregister since the activity is paused.
         unregisterReceiver(mReceiver);
+        if(mManager != null)
+            mManager.removeLocalService(mChannel, mServiceInfo, new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {}
+
+                @Override
+                public void onFailure(int reason) {}
+            });
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         registerReceiver(mReceiver, mIntentFilter);
+        if(mManager != null)
+            startRegistration();
         super.onResume();
     }
 
@@ -190,18 +200,18 @@ public class MainActivity extends AppCompatActivity {
         mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
-                Log.d("WiFiDirectService","Peers successfully discovered");
+                Log.d(TAG,"Peers successfully discovered");
             }
 
             @Override
             public void onFailure(int reasonCode) {
-                Log.d("WiFiDirectService","Failed to discover peers");
+                Log.d(TAG,"Failed to discover peers");
             }
         });
     }
 
     private void connectionEstablished() {
-        Log.d("RoboSimulator","Connection established");
+        Log.d(TAG,"Connection established");
         mRobotStatusClient = new SendStatusClient(mDeviceAddress,mHostPort);
         mControlCommandClient.start();
         connectStatus_txt.setText(mDeviceAddress.toString() + " (" + mHostPort + ")");
@@ -211,7 +221,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void connectionLost() {
-        Log.d("RoboSimulator","Connection lost");
+        Log.d(TAG,"Connection lost");
         connectStatus_txt.setText("Waiting for connection...");
         sendCustomCmd_btn.setEnabled(false);
         updateStatus_btn.setEnabled(false);
@@ -221,6 +231,33 @@ public class MainActivity extends AppCompatActivity {
         }
         mDiscoverPeers = true;
         discoverPeers();
+    }
+
+    private void startRegistration() {
+        //  Create a string map containing information about your service.
+        Map record = new HashMap();
+        record.put("device_name", mDeviceName);
+
+        // Service information.  Pass it an instance name, service type
+        // _protocol._transportlayer , and the map containing
+        // information other devices will want once they connect to this one.
+        mServiceInfo = WifiP2pDnsSdServiceInfo.newInstance("_"+mSystemName, "_bachelorgogo_ctrl", record);
+        Log.d(TAG,"Registering network service");
+        // Add the local service, sending the service info, network channel,
+        // and listener that will be used to indicate success or failure of
+        // the request.
+        mManager.addLocalService(mChannel, mServiceInfo, new WifiP2pManager.ActionListener() {
+            @Override
+            public void onSuccess() {
+                Log.d(TAG,"Succesfully added network service");
+            }
+
+            @Override
+            public void onFailure(int arg0) {
+                // Command failed.  Check for P2P_UNSUPPORTED, ERROR, or BUSY
+                Log.d(TAG,"Failed to add network service");
+            }
+        });
     }
 
     public class WiFiDirectBroadcastReceiver extends BroadcastReceiver {
@@ -260,16 +297,16 @@ public class MainActivity extends AppCompatActivity {
                             @Override
                             public void onConnectionInfoAvailable(WifiP2pInfo info) {
                                 if (info.groupFormed) {
-                                    Log.d("RoboSimulator", "Group formed");
+                                    Log.d(TAG, "Group formed");
                                     if (info.isGroupOwner) {
-                                        Log.d("RoboSimulator", "is group owner");
+                                        Log.d(TAG, "is group owner");
                                         //Listen for clients and exchange ports
                                         AsyncTask<Void, Void, Void> async_client = new AsyncTask<Void, Void, Void>() {
                                             @Override
                                             protected Void doInBackground(Void... params) {
                                                 try {
                                                     mServerSocket = new ServerSocket(mGroupOwnerPort);
-                                                    Log.d("RoboSimulator", "Listening for clients on port " + Integer.toString(mGroupOwnerPort));
+                                                    Log.d(TAG, "Listening for clients on port " + Integer.toString(mGroupOwnerPort));
                                                     mSocket = mServerSocket.accept();
                                                     mDeviceAddress = mSocket.getInetAddress();
                                                     DataOutputStream out = new DataOutputStream(mSocket.getOutputStream());
@@ -280,7 +317,7 @@ public class MainActivity extends AppCompatActivity {
                                                     int hostPort = Integer.valueOf(dataStr);
                                                     if (hostPort > 0 && hostPort < 9999)
                                                         mHostPort = hostPort;
-                                                    Log.d("RoboSimulator", "client resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
+                                                    Log.d(TAG, "client resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
                                                     publishProgress();
 
                                                     //Send port to client
@@ -307,7 +344,7 @@ public class MainActivity extends AppCompatActivity {
                                             async_client.execute((Void[]) null);
                                     } else {
                                         mDeviceAddress = info.groupOwnerAddress;
-                                        Log.d("WiFiDirectService", "host resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
+                                        Log.d(TAG, "host resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
                                         //transmit ip to group owner and exchange ports
                                         AsyncTask<Void, Void, Void> async_transmit_ip = new AsyncTask<Void, Void, Void>() {
                                             @Override
@@ -355,12 +392,12 @@ public class MainActivity extends AppCompatActivity {
                 // Peer discovery stopped or started
                 int discovery = intent.getIntExtra(WifiP2pManager.EXTRA_DISCOVERY_STATE, -1);
                 if (discovery == WifiP2pManager.WIFI_P2P_DISCOVERY_STARTED) {
-                    Log.d("WiFiBroadcastReceiver", "Peer discovery started");
+                    Log.d(TAG, "Peer discovery started");
                     mDiscoverPeers = true;
                 }
                 //Continuously discover peers if enabled
                 else if (discovery == WifiP2pManager.WIFI_P2P_DISCOVERY_STOPPED) {
-                    Log.d("WiFiBroadcastReceiver", "Peer discovery stopped");
+                    Log.d(TAG, "Peer discovery stopped");
                     if (mDiscoverPeers)
                         discoverPeers();
                 }

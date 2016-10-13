@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
  */
 
 public class SendStatusClient {
+    private final String TAG = "SendStatusClient";
     private InetAddress mHostAddress;
     private int mPort;
     private String mCommand;
@@ -36,7 +37,7 @@ public class SendStatusClient {
             {
                 try
                 {
-                    if(mCommand.length() <= 255) {
+                    if(mCommand.length() <= (2^32-1)) {
                         mDatagramSocket = new DatagramSocket();
 
                         //First send packet size...
@@ -47,7 +48,7 @@ public class SendStatusClient {
                         mDatagramSocket.send(sizePacket);
 
                         //Then the actual packet
-                        Log.d("SendStatusClient", "Sending command: " + mCommand);
+                        Log.d(TAG, "Sending command: " + mCommand);
                         byte[] message = mCommand.getBytes();
                         DatagramPacket dp = new DatagramPacket(message, message.length, mHostAddress, mPort);
                         mDatagramSocket.send(dp);
@@ -55,7 +56,7 @@ public class SendStatusClient {
                 }
                 catch (Exception e)
                 {
-                    Log.d("SendStatusClient","Error sending command");
+                    Log.d(TAG,"Error sending command");
                     e.printStackTrace();
                 }
                 finally
@@ -70,7 +71,7 @@ public class SendStatusClient {
 
             protected void onPostExecute(Void result)
             {
-                Log.d("SendStatusClient","Finished sending command");
+                Log.d(TAG,"Finished sending command");
                 super.onPostExecute(result);
             }
         };

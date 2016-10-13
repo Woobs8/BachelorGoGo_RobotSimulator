@@ -6,76 +6,90 @@ import android.util.Log;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketTimeoutException;
+import java.nio.ByteBuffer;
 
 /**
  * Created by THP on 06-10-2016.
  */
 
 public class ReceiveCommandsClient {
-    private final int packetSize = 3;
+    private final String TAG = "ReceiveCommandsClient";
+    private int mPacketSize;
     private int mPort;
     private String mReceivedString;
     private DatagramSocket mDatagramSocket;
     private AsyncTask<Void, Void, Void> async_client;
-    private boolean mReceiveData;
-    private MainActivity mActivity;
+    private int mReceiveTimeout = 5000; //5sec * 1000 msec
+
 
     ReceiveCommandsClient(int port, MainActivity activity) {
         mPort = port;
         mDatagramSocket = null;
-        mReceiveData = false;
-        mActivity = activity;
     }
 
     public void start() {
-        mReceiveData = true;
         async_client = new AsyncTask<Void, Void, Void>()
         {
             @Override
             protected Void doInBackground(Void... params)
             {
-                try {
-                    mDatagramSocket = new DatagramSocket(mPort);
-                    byte[] receiveData = new byte[packetSize];
-                    while (mReceiveData) {
-                        DatagramPacket recv_packet = new DatagramPacket(receiveData, receiveData.length);
-                        Log.d("ReceiveCommandsClient", "receiving data");
-                        mDatagramSocket.receive(recv_packet);
-                        mReceivedString = new String(recv_packet.getData());
-                        Log.d("ReceiveCommandsClient", "Received string: " + mReceivedString);
-                        publishProgress();
-                    }
-                } catch (Exception e) {
-                    Log.e("ReceiveCommandsClient", "Error receiving data");
-                    e.printStackTrace();
-                } finally {
-                    if (mDatagramSocket != null)
-                    {
-                        mDatagramSocket.close();
-                    }
-                }
+                Log.d(TAG,"Started listening for robot status messages");
+                while (!isCancelled())
+                    listenOnSocket();
                 return null;
             }
 
-            @Override
-            protected void onProgressUpdate(Void... values) {
-                mActivity.xCoord_txt.setText(mReceivedString);
-            }
-
-            @Override
             protected void onPostExecute(Void result)
             {
-                Log.d("ReceiveCommandsClient","Finished receiving data");
+                Log.d(TAG,"Stopped listening for robot status messages");
+                super.onPostExecute(result);
             }
         };
         // http://stackoverflow.com/questions/9119627/android-sdk-asynctask-doinbackground-not-running-subclass
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB)
-            async_client.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Void[])null);
+            async_client.executeOnExecutor(AsyncTask.THREAD_POOL_EXECUTOR, (Void[]) null);
         else
-            async_client.execute((Void[])null);
+            async_client.execute((Void[]) null);
+
+    }
+    public void stop() {
+        if(async_client != null)
+            async_client.cancel(true);
     }
 
-    public void stop() {
-        mReceiveData = false;
+    private void listenOnSocket() {
+        try {
+            Log.d(TAG,"Opening socket on port " + mPort);
+            mDatagramSocket = new DatagramSocket(mPort);
+            byte[] packetSizeData = new byte[4];    //Max size = 2^32
+            mDatagramSocket.setSoTimeout(mReceiveTimeout);
+
+            //First read size of packet...
+            DatagramPacket size_packet = new DatagramPacket(packetSizeData, packetSizeData.length);
+            mDatagramSocket.receive(size_packet);
+            ByteBuffer sizeBuffer = ByteBuffer.wrap(size_packet.getData()); // big-endian by default
+            mPacketSize = sizeBuffer.getInt();
+            Log.d(TAG,"Receiving packet of size: " + mPacketSize);
+
+            //...Then the actual packet
+            byte[] receiveData = new byte[mPacketSize];
+            DatagramPacket recv_packet = new DatagramPacket(receiveData, receiveData.length);
+            Log.d(TAG, "Receiving data");
+            mDatagramSocket.receive(recv_packet);
+            mReceivedString = new String(recv_packet.getData());
+            Log.d(TAG, "Received string: " + mReceivedString);
+        } catch (SocketTimeoutException se) {
+            Log.d(TAG, "Receiving socket timed out");
+        } catch (Exception e) {
+            Log.e(TAG, "Error occurred while listening on port " + mPort);
+            e.printStackTrace();
+        } finally {
+            Log.d(TAG,"Closing socket on port " + mPort);
+            if (mDatagramSocket != null)
+            {
+                mDatagramSocket.close();
+            }
+        }
     }
 }
