@@ -308,7 +308,7 @@ public class MainActivity extends AppCompatActivity {
                     case CAR_NAME_TAG:
                         deviceName_txt.setText(tempDataSegment[1]);
                         break;
-                    case CAMERA_VIDEO_QUALITY:
+                    case CAMERA_VIDEO_QUALITY_TAG:
                         videoSettings_txt.setText(tempDataSegment[1]);
                         break;
                     case POWER_SAVE_DRIVE_MODE_TAG:

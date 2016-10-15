@@ -59,6 +59,7 @@ public final class RobotProtocol {
         public static final String BATTERY_TAG = "Battery";
         public static final String CAMERA_TAG = "Camera";
         public static final String STORAGE_SPACE_TAG = "Space";
+        public static final String CAMERA_VIDEO_QUALITY_TAG = "VideoQuality";
         public static final String STORAGE_REMAINING_TAG = "Remaining";
         public static final String ASSERTED_DRIVE_MODE_TAG = "Asserted";
         public static final String POWER_SAVE_DRIVE_MODE_TAG = "PowerMode";
