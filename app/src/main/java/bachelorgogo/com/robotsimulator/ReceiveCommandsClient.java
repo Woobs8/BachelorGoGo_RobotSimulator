@@ -1,17 +1,14 @@
 package bachelorgogo.com.robotsimulator;
 
+import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
-
-/**
- * Created by THP on 06-10-2016.
- */
 
 public class ReceiveCommandsClient {
     private final String TAG = "ReceiveCommandsClient";
@@ -20,15 +17,17 @@ public class ReceiveCommandsClient {
     private String mReceivedString;
     private DatagramSocket mDatagramSocket;
     private AsyncTask<Void, Void, Void> async_client;
-    private int mReceiveTimeout = 5000; //5sec * 1000 msec
-
+    private boolean mManualStop;
+    private MainActivity mActivity;
 
     ReceiveCommandsClient(int port, MainActivity activity) {
         mPort = port;
         mDatagramSocket = null;
+        mActivity = activity;
     }
 
     public void start() {
+        mManualStop = false;
         async_client = new AsyncTask<Void, Void, Void>()
         {
             @Override
@@ -53,9 +52,13 @@ public class ReceiveCommandsClient {
             async_client.execute((Void[]) null);
 
     }
+
     public void stop() {
-        if(async_client != null)
+        mManualStop = true;
+        if(async_client != null) {
             async_client.cancel(true);
+            mDatagramSocket.close();
+        }
     }
 
     private void listenOnSocket() {
@@ -63,7 +66,6 @@ public class ReceiveCommandsClient {
             Log.d(TAG,"Opening socket on port " + mPort);
             mDatagramSocket = new DatagramSocket(mPort);
             byte[] packetSizeData = new byte[4];    //Max size = 2^32
-            mDatagramSocket.setSoTimeout(mReceiveTimeout);
 
             //First read size of packet...
             DatagramPacket size_packet = new DatagramPacket(packetSizeData, packetSizeData.length);
@@ -78,12 +80,19 @@ public class ReceiveCommandsClient {
             Log.d(TAG, "Receiving data");
             mDatagramSocket.receive(recv_packet);
             mReceivedString = new String(recv_packet.getData());
-            Log.d(TAG, "Received string: " + mReceivedString);
-        } catch (SocketTimeoutException se) {
-            Log.d(TAG, "Receiving socket timed out");
+            Log.d(TAG, "Received command: " + mReceivedString);
+
+            //Broadcast received data
+            Intent notifyActivity = new Intent(MainActivity.CONTROL_INPUT_RECEIVED);
+            notifyActivity.putExtra(MainActivity.CONTROL_INPUT_RECEIVED_KEY, mReceivedString);
+            LocalBroadcastManager.getInstance(mActivity.getApplicationContext()).sendBroadcast(notifyActivity);
         } catch (Exception e) {
-            Log.e(TAG, "Error occurred while listening on port " + mPort);
-            e.printStackTrace();
+            if(!mManualStop) {
+                Log.e(TAG, "Error occurred while listening on port " + mPort);
+                e.printStackTrace();
+            } else {
+                Log.d(TAG,"Socket on port " + mPort + " closed manually");
+            }
         } finally {
             Log.d(TAG,"Closing socket on port " + mPort);
             if (mDatagramSocket != null)

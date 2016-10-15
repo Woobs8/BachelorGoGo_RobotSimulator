@@ -1,5 +1,8 @@
 package bachelorgogo.com.robotsimulator;
 
+import static bachelorgogo.com.robotsimulator.RobotProtocol.SEND_COMMANDS.*;
+import static bachelorgogo.com.robotsimulator.RobotProtocol.DATA_TAGS.*;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -10,6 +13,7 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -30,16 +34,24 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.util.HashMap;
 import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = "RobotSimulator";
+    static public final String SETTINGS_RECEIVED = "settings_received";
+    static public final String SETTINGS_RECEIVED_KEY = "settings_received_key";
+    static public final String CONTROL_INPUT_RECEIVED = "control_input_received";
+    static public final String CONTROL_INPUT_RECEIVED_KEY = "control_input_received_key";
+
+    private final String STEERING_XY_COORDINATE = "CS*XY";
 
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
     BroadcastReceiver mReceiver;
-    IntentFilter mIntentFilter;
+    IntentFilter mWiFiDirectIntentFilter;
+    IntentFilter mLocalBroadcastIntentFilter;
     WifiP2pDnsSdServiceInfo mServiceInfo;
 
     //UI elements
@@ -60,8 +72,10 @@ public class MainActivity extends AppCompatActivity {
     ServerSocket mServerSocket;
     Socket mSocket;
     private int mGroupOwnerPort = 9999;
-    private int mLocalPort = 4998;
+    private int mLocalUDPPort = 4998;
+    private int mLocalTCPPort = 4997;
     private int mHostPort = -1;
+    private int mEstablishConnectionTimeout = 5000; //5 sec * 1000 msec
 
     private final String mSystemName = "eROTIC";
     private String mDeviceName = "RoboGoGo";
@@ -77,6 +91,7 @@ public class MainActivity extends AppCompatActivity {
 
     ReceiveCommandsClient mControlCommandClient;
     SendStatusClient mRobotStatusClient;
+    SettingsClient mSettingsClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,12 +171,17 @@ public class MainActivity extends AppCompatActivity {
         mReceiver = new MainActivity.WiFiDirectBroadcastReceiver(mManager, mChannel, this);
 
         //Intent filter with intents receiver checks for
-        mIntentFilter = new IntentFilter();
-        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
-        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
-        mIntentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
+        mWiFiDirectIntentFilter = new IntentFilter();
+        mWiFiDirectIntentFilter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
+        mWiFiDirectIntentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
+        mWiFiDirectIntentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
 
-        mControlCommandClient = new ReceiveCommandsClient(mLocalPort, MainActivity.this);
+        //Intent filter for local broadcasts
+        mLocalBroadcastIntentFilter = new IntentFilter();
+        mLocalBroadcastIntentFilter.addAction(SETTINGS_RECEIVED);
+        mLocalBroadcastIntentFilter.addAction(CONTROL_INPUT_RECEIVED);
+
+        mControlCommandClient = new ReceiveCommandsClient(mLocalUDPPort, MainActivity.this);
 
         discoverPeers();
     }
@@ -177,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         // Unregister since the activity is paused.
         unregisterReceiver(mReceiver);
+        unregisterReceiver(mBroadcastReceiver);
         if(mManager != null)
             mManager.removeLocalService(mChannel, mServiceInfo, new WifiP2pManager.ActionListener() {
                 @Override
@@ -190,7 +211,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onResume() {
-        registerReceiver(mReceiver, mIntentFilter);
+        registerReceiver(mReceiver, mWiFiDirectIntentFilter);
+        registerReceiver(mBroadcastReceiver, mLocalBroadcastIntentFilter);
+
         if(mManager != null)
             startRegistration();
         super.onResume();
@@ -210,10 +233,74 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    // Broadcast handler for received Intents.
+    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+        if (intent != null) {
+            String recv;
+            switch (intent.getAction()) {
+                case SETTINGS_RECEIVED:
+                    recv = intent.getStringExtra(SETTINGS_RECEIVED_KEY);
+                    parseSettingsInput(recv);
+                    break;
+                case CONTROL_INPUT_RECEIVED:
+                    recv = intent.getStringExtra(CONTROL_INPUT_RECEIVED_KEY);
+                    parseControlInput(recv);
+                    break;
+            }
+        }
+        }
+    };
+
+    private void parseControlInput(String cmd) {
+        if(cmd.contains(STEERING_XY_COORDINATE)) {
+            cmd.substring(cmd.indexOf("*") + 2);
+            String segmentedCMD[] = cmd.split(";");
+            Log.d(TAG,"Setting x,y coordinates");
+            xCoord_txt.setText(segmentedCMD[0]);
+            yCoord_txt.setText(segmentedCMD[1]);
+        } else {
+            Log.d(TAG,"Unknown control packet");
+        }
+    }
+
+    private void parseSettingsInput(String settings) {
+        settings.substring(settings.indexOf("*")+2);
+
+        String segmentedSettings[] = settings.split(";");
+
+        for(int i = 0; i < segmentedSettings.length; i++){
+            String tempDataSegment[] = segmentedSettings[i].split(":");
+            switch (tempDataSegment[0]){
+                case CAR_NAME_TAG :
+                    carName = tempDataSegment[1];
+                    break;
+                case BATTERY_TAG :
+                    batteryPercentage = Integer.parseInt(tempDataSegment[1]);
+                    break;
+                case MAC_TAG :
+                    macAddr = tempDataSegment[1];
+                    break;
+                case CAMERA_TAG :
+                    cameraAvailable = (tempDataSegment[1] == "1") ? true : false;
+                    break;
+                case STORAGE_SPACE_TAG :
+                    storageSpace = tempDataSegment[1];
+                    break;
+                case STORAGE_REMAINING :
+                    storageRemaining = tempDataSegment[1];
+                    break;
+            }
+        }
+    }
+
     private void connectionEstablished() {
         Log.d(TAG,"Connection established");
         mRobotStatusClient = new SendStatusClient(mDeviceAddress,mHostPort);
         mControlCommandClient.start();
+        mSettingsClient = new SettingsClient(mLocalTCPPort,this);
+        mSettingsClient.start();
         connectStatus_txt.setText(mDeviceAddress.toString() + " (" + mHostPort + ")");
         sendCustomCmd_btn.setEnabled(true);
         updateStatus_btn.setEnabled(true);
@@ -228,6 +315,9 @@ public class MainActivity extends AppCompatActivity {
 
         if(mControlCommandClient != null) {
             mControlCommandClient.stop();
+        }
+        if(mSettingsClient != null) {
+            mSettingsClient.stop();
         }
         mDiscoverPeers = true;
         discoverPeers();
@@ -306,6 +396,7 @@ public class MainActivity extends AppCompatActivity {
                                             protected Void doInBackground(Void... params) {
                                                 try {
                                                     mServerSocket = new ServerSocket(mGroupOwnerPort);
+                                                    mServerSocket.setSoTimeout(mEstablishConnectionTimeout);
                                                     Log.d(TAG, "Listening for clients on port " + Integer.toString(mGroupOwnerPort));
                                                     mSocket = mServerSocket.accept();
                                                     mDeviceAddress = mSocket.getInetAddress();
@@ -320,13 +411,28 @@ public class MainActivity extends AppCompatActivity {
                                                     Log.d(TAG, "client resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
                                                     publishProgress();
 
-                                                    //Send port to client
-                                                    out.writeUTF(Integer.toString(mLocalPort));
+                                                    //Send UDP port to client
+                                                    out.writeUTF(Integer.toString(mLocalUDPPort));
 
-                                                    mSocket.close();
-                                                    mServerSocket.close();
+                                                    //Send TCP port to client
+                                                    out.writeUTF(Integer.toString(mLocalTCPPort));
+
+                                                } catch (SocketTimeoutException st) {
+                                                    Log.d(TAG,"Attempt to establish connection timed out");
+                                                    mConnected = false;
                                                 } catch (IOException e) {
+                                                    Log.e(TAG, "Error listening for client IPs");
                                                     e.printStackTrace();
+                                                    mConnected = false;
+                                                } finally {
+                                                    try {
+                                                        Log.d(TAG,"Closing socket " + mGroupOwnerPort);
+                                                        mSocket.close();
+                                                        mServerSocket.close();
+                                                    } catch (IOException e) {
+                                                        Log.d(TAG,"Error closing sockets");
+                                                        e.printStackTrace();
+                                                    }
                                                 }
                                                 return null;
                                             }
@@ -351,23 +457,42 @@ public class MainActivity extends AppCompatActivity {
                                             protected Void doInBackground(Void... params) {
                                                 try {
                                                     mSocket = new Socket();
+                                                    mSocket.setSoTimeout(mEstablishConnectionTimeout);
                                                     mSocket.bind(null);
-                                                    mSocket.connect((new InetSocketAddress(mDeviceAddress, mGroupOwnerPort)), 500);
+                                                    mSocket.connect((new InetSocketAddress(mDeviceAddress, mGroupOwnerPort)));
                                                     DataInputStream in = new DataInputStream(mSocket.getInputStream());
                                                     DataOutputStream out = new DataOutputStream(mSocket.getOutputStream());
 
-                                                    //Send port to server
-                                                    out.writeUTF(Integer.toString(mLocalPort));
+                                                    //Send UDP port to server
+                                                    out.writeUTF(Integer.toString(mLocalUDPPort));
 
-                                                    //read server port
+                                                    //Send TCP port to server
+                                                    out.writeUTF(Integer.toString(mLocalTCPPort));
+
+                                                    //read server UDP port
                                                     String dataStr = in.readUTF();
                                                     int hostPort = Integer.valueOf(dataStr);
                                                     if (hostPort > 0 && hostPort < 9999)
                                                         mHostPort = hostPort;
-
-                                                    mSocket.close();
+                                                } catch (SocketTimeoutException st) {
+                                                    Log.d(TAG,"Attempt to establish connection timed out");
+                                                    mConnected = false;
+                                                    connectionLost();
                                                 } catch (IOException e) {
+                                                    Log.e(TAG, "Error connecting to group owner");
                                                     e.printStackTrace();
+                                                    mConnected = false;
+                                                    connectionLost();
+                                                } finally {
+                                                    try {
+                                                        if (mSocket != null)
+                                                            mSocket.close();
+                                                        if(mServerSocket != null)
+                                                            mServerSocket.close();
+                                                    } catch (IOException e) {
+                                                        Log.d(TAG,"Error closing sockets");
+                                                        e.printStackTrace();
+                                                    }
                                                 }
                                                 return null;
                                             }

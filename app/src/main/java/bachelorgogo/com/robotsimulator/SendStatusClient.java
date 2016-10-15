@@ -56,7 +56,7 @@ public class SendStatusClient {
                 }
                 catch (Exception e)
                 {
-                    Log.d(TAG,"Error sending command");
+                    Log.d(TAG,"Error sending status");
                     e.printStackTrace();
                 }
                 finally
@@ -71,7 +71,7 @@ public class SendStatusClient {
 
             protected void onPostExecute(Void result)
             {
-                Log.d(TAG,"Finished sending command");
+                Log.d(TAG,"Finished sending status");
                 super.onPostExecute(result);
             }
         };
