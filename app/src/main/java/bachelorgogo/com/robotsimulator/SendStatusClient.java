@@ -37,7 +37,7 @@ public class SendStatusClient {
             {
                 try
                 {
-                    if(mCommand.length() <= (2^32-1)) {
+                    if(mCommand.length() <= (Math.pow(2,32)-1)) {
                         mDatagramSocket = new DatagramSocket();
 
                         //First send packet size...

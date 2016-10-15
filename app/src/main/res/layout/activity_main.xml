@@ -96,25 +96,6 @@
         android:layout_alignEnd="@+id/textView6"
         android:id="@+id/camera_sw" />
 
-    <Button
-        android:text="Update Status"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/update_status_btn"
-        android:layout_below="@+id/camera_sw"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
-
-    <TextView
-        android:text="Received"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/textView5"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:layout_below="@+id/update_status_btn"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
-
     <TextView
         android:text="Power Save Mode: "
         android:layout_width="wrap_content"
@@ -215,17 +196,6 @@
         android:layout_alignStart="@+id/y_coord_txt" />
 
     <TextView
-        android:text="Waiting for connection..."
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignLeft="@+id/custom_cmd_header"
-        android:layout_alignStart="@+id/custom_cmd_header"
-        android:id="@+id/connection_status_txt"
-        android:textAppearance="@style/TextAppearance.AppCompat.Large"
-        android:singleLine="true" />
-
-    <TextView
         android:text="Custom command:"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -242,5 +212,58 @@
         android:layout_above="@+id/video_settings_header"
         android:layout_toRightOf="@+id/custom_cmd_field"
         android:layout_toEndOf="@+id/custom_cmd_field" />
+
+    <Button
+        android:text="Update Status"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/update_status_btn"
+        android:layout_below="@+id/camera_sw"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:layout_marginTop="54dp" />
+
+    <TextView
+        android:text="Available Storage:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/camera_sw"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginTop="13dp"
+        android:id="@+id/avaialble_storage_header" />
+
+    <SeekBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerVertical="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:id="@+id/available_storage_sb"
+        android:layout_alignRight="@+id/battery_status_sb"
+        android:layout_alignEnd="@+id/battery_status_sb"
+        android:max="250"
+        android:progress="200" />
+
+    <TextView
+        android:text="Received"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView5"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:layout_below="@+id/update_status_btn"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:text="Waiting for connection..."
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/connection_status_txt"
+        android:textAppearance="@style/TextAppearance.AppCompat.Large"
+        android:singleLine="true"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
 
 </RelativeLayout>

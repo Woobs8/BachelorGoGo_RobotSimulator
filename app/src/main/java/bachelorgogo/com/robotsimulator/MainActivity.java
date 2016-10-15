@@ -13,7 +13,6 @@ import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.os.AsyncTask;
 import android.os.Build;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -42,16 +41,11 @@ public class MainActivity extends AppCompatActivity {
     private final String TAG = "RobotSimulator";
     static public final String SETTINGS_RECEIVED = "settings_received";
     static public final String SETTINGS_RECEIVED_KEY = "settings_received_key";
-    static public final String CONTROL_INPUT_RECEIVED = "control_input_received";
-    static public final String CONTROL_INPUT_RECEIVED_KEY = "control_input_received_key";
-
-    private final String STEERING_XY_COORDINATE = "CS*XY";
 
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
     BroadcastReceiver mReceiver;
     IntentFilter mWiFiDirectIntentFilter;
-    IntentFilter mLocalBroadcastIntentFilter;
     WifiP2pDnsSdServiceInfo mServiceInfo;
 
     //UI elements
@@ -59,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     Button updateStatus_btn;
     EditText customCmd_field;
     SeekBar batteryCharge_sb;
+    SeekBar availableStorage_sb;
     Switch cameraAvailability_sw;
     TextView xCoord_txt;
     TextView xCoord_header;
@@ -79,19 +74,19 @@ public class MainActivity extends AppCompatActivity {
     private int mHostPort = -1;
     private int mEstablishConnectionTimeout = 5000; //5 sec * 1000 msec
 
-    private final String mSystemName = "eROTIC";
+    private final String mSystemName = "GiantsFTW";
     private String mDeviceName = "RoboGoGo";
     private String mCustomCmd;
     private String mVideoSettings = "";
     private String mPowerSaveMode = "";
     private String mAssistedDrivingMode = "";
-    private String mMemRemaining = "1TB";
-    private String mMemSpace = "200TB";
+    private String mStorageCapacity = "250MB";
     private int mBatteryLevel = 100;
     private boolean mCameraAvailable = false;
     private boolean mWiFiDirectEnabled = false;
     private boolean mConnected = false;
     private boolean mDiscoverPeers = false;
+    private int mAvailableStorage;
 
     ReceiveCommandsClient mControlCommandClient;
     SendStatusClient mRobotStatusClient;
@@ -117,8 +112,9 @@ public class MainActivity extends AppCompatActivity {
         updateStatus_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String sendString = RobotProtocol.getDataBroadcastString(mDeviceName,Integer.toString(mBatteryLevel),mMemSpace,mMemRemaining,(mCameraAvailable==true ? TRUE : FALSE));
+                String sendString = RobotProtocol.getDataBroadcastString(mDeviceName,Integer.toString(mBatteryLevel), mStorageCapacity,Integer.toString(mAvailableStorage),(mCameraAvailable==true ? TRUE : FALSE));
                 mRobotStatusClient.sendCommand(sendString);
+                Log.d(TAG,sendString);
 
             }
         });
@@ -156,6 +152,24 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        availableStorage_sb = (SeekBar) findViewById(R.id.available_storage_sb);
+        availableStorage_sb.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                mAvailableStorage = progress;
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+
+            }
+        });
+
         cameraAvailability_sw = (Switch) findViewById(R.id.camera_sw);
         cameraAvailability_sw.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -184,18 +198,15 @@ public class MainActivity extends AppCompatActivity {
         mWiFiDirectIntentFilter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);
         mWiFiDirectIntentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
 
-        //Intent filter for local broadcasts
-        mLocalBroadcastIntentFilter = new IntentFilter();
-        mLocalBroadcastIntentFilter.addAction(SETTINGS_RECEIVED);
-        mLocalBroadcastIntentFilter.addAction(CONTROL_INPUT_RECEIVED);
-
-        mControlCommandClient = new ReceiveCommandsClient(mLocalUDPPort, MainActivity.this);
+        mControlCommandClient = new ReceiveCommandsClient(mLocalUDPPort, this);
 
         discoverPeers();
+        Log.d(TAG, "onCreate: Exiting onCreate");
     }
 
     @Override
     protected void onDestroy() {
+        mManager.cancelConnect(mChannel,null);
         mManager.removeGroup(mChannel,null);
         mControlCommandClient.stop();
         super.onDestroy();
@@ -205,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         // Unregister since the activity is paused.
         unregisterReceiver(mReceiver);
-        unregisterReceiver(mBroadcastReceiver);
+        //unregisterReceiver(mBroadcastReceiver);
         if(mManager != null)
             mManager.removeLocalService(mChannel, mServiceInfo, new WifiP2pManager.ActionListener() {
                 @Override
@@ -220,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         registerReceiver(mReceiver, mWiFiDirectIntentFilter);
-        registerReceiver(mBroadcastReceiver, mLocalBroadcastIntentFilter);
+        //registerReceiver(mBroadcastReceiver, mLocalBroadcastIntentFilter);
 
         if(mManager != null)
             startRegistration();
@@ -241,34 +252,17 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Broadcast handler for received Intents.
-    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-        if (intent != null) {
-            String recv;
-            switch (intent.getAction()) {
-                case SETTINGS_RECEIVED:
-                    recv = intent.getStringExtra(SETTINGS_RECEIVED_KEY);
-                    parseSettingsInput(recv);
-                    break;
-                case CONTROL_INPUT_RECEIVED:
-                    recv = intent.getStringExtra(CONTROL_INPUT_RECEIVED_KEY);
-                    parseControlInput(recv);
-                    break;
-            }
-        }
-        }
-    };
-
-    private void parseControlInput(String cmd) {
+    public void parseControlInput(String cmd) {
         if(cmd.contains(CMD_CONTROL)) {
-            cmd.substring(cmd.indexOf("*") + 2);
+            cmd = cmd.substring(cmd.indexOf("*") + 3);
 
             String mSegmentedRawData[] = cmd.split(";");
 
             for(int i = 0; i < mSegmentedRawData.length; i++) {
                 String tempDataSegment[] = mSegmentedRawData[i].split(":");
+                Log.d(TAG,mSegmentedRawData[i]);
+                Log.d(TAG,tempDataSegment[0]);
+                Log.d(TAG,tempDataSegment[1]);
                 switch (tempDataSegment[0]) {
                     case STEERING_X_COORDINATE_TAG:
                         Log.d(TAG, "Setting x coordinate");
@@ -296,9 +290,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void parseSettingsInput(String settings) {
+    public void parseSettingsInput(String settings) {
         if(settings.contains(CMD_SETTINGS)) {
-            settings.substring(settings.indexOf("*") + 2);
+            settings = settings.substring(settings.indexOf("*") + 3);
 
             String segmentedSettings[] = settings.split(";");
 
@@ -306,16 +300,40 @@ public class MainActivity extends AppCompatActivity {
                 String tempDataSegment[] = segmentedSettings[i].split(":");
                 switch (tempDataSegment[0]) {
                     case CAR_NAME_TAG:
-                        deviceName_txt.setText(tempDataSegment[1]);
+                        mDeviceName = tempDataSegment[1];
+                        deviceName_txt.setText(mDeviceName);
                         break;
                     case CAMERA_VIDEO_QUALITY_TAG:
-                        videoSettings_txt.setText(tempDataSegment[1]);
+                        switch(tempDataSegment[1]) {
+                            case "-1":
+                                videoSettings_txt.setText(getString(R.string.video_quality_default));
+                            case "1":
+                                videoSettings_txt.setText(getString(R.string.video_quality_0));
+                                break;
+                            case "2":
+                                videoSettings_txt.setText(getString(R.string.video_quality_1));
+                                break;
+                        }
                         break;
                     case POWER_SAVE_DRIVE_MODE_TAG:
-                        powerMode_txt.setText(tempDataSegment[1]);
+                        switch(tempDataSegment[1]) {
+                            case "0":
+                                powerMode_txt.setText(getString(R.string.setting_disabled));
+                                break;
+                            case "1":
+                                powerMode_txt.setText(getString(R.string.setting_enabled));
+                                break;
+                        }
                         break;
                     case ASSERTED_DRIVE_MODE_TAG:
-                        assistedDrivingMode_txt.setText(tempDataSegment[1]);
+                        switch(tempDataSegment[1]) {
+                            case "0":
+                                assistedDrivingMode_txt.setText(getString(R.string.setting_disabled));
+                                break;
+                            case "1":
+                                assistedDrivingMode_txt.setText(getString(R.string.setting_enabled));
+                                break;
+                        }
                         break;
                 }
             }
@@ -449,19 +467,28 @@ public class MainActivity extends AppCompatActivity {
 
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
+                                                    connectionLost();
                                                     mConnected = false;
                                                 } catch (IOException e) {
                                                     Log.e(TAG, "Error listening for client IPs");
                                                     e.printStackTrace();
+                                                    connectionLost();
                                                     mConnected = false;
                                                 } finally {
                                                     try {
                                                         Log.d(TAG,"Closing socket " + mGroupOwnerPort);
-                                                        mSocket.close();
-                                                        mServerSocket.close();
+                                                        if(mSocket != null)
+                                                            mSocket.close();
+                                                        if(mServerSocket != null)
+                                                            mServerSocket.close();
                                                     } catch (IOException e) {
                                                         Log.d(TAG,"Error closing sockets");
                                                         e.printStackTrace();
+                                                    }
+                                                    if(!mConnected) {
+                                                        Log.d(TAG,"Error establishing connection to client. Closing Wifi Direct Group");
+                                                        mManager.cancelConnect(mChannel,null);
+                                                        mManager.removeGroup(mChannel,null);
                                                     }
                                                 }
                                                 return null;
@@ -522,6 +549,11 @@ public class MainActivity extends AppCompatActivity {
                                                     } catch (IOException e) {
                                                         Log.d(TAG,"Error closing sockets");
                                                         e.printStackTrace();
+                                                    }
+                                                    if(!mConnected) {
+                                                        Log.d(TAG,"Error establishing connection to client. Closing Wifi Direct Group");
+                                                        mManager.cancelConnect(mChannel,null);
+                                                        mManager.removeGroup(mChannel,null);
                                                     }
                                                 }
                                                 return null;

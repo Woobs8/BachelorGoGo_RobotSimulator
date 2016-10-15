@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">RobotSimulator</string>
+    <string name="video_quality_0">320x200 @ 30 fps</string>
+    <string name="video_quality_1">640x200 @ 15 fps</string>
+    <string name="video_quality_default">Default</string>
+    <string name="setting_enabled">Enabled</string>
+    <string name="setting_disabled">Disabled</string>
 </resources>

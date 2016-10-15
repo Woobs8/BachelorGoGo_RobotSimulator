@@ -14,10 +14,8 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-
-/**
- * Created by rasmus on 10/13/2016.
- */
+import static bachelorgogo.com.robotsimulator.RobotProtocol.SEND_COMMANDS.*;
+import static bachelorgogo.com.robotsimulator.RobotProtocol.DATA_TAGS.*;
 
 public class SettingsClient {static final String TAG = "SettingsClient";
     private InetAddress mHostAddress;
@@ -28,6 +26,7 @@ public class SettingsClient {static final String TAG = "SettingsClient";
     private boolean mSettinsTransmitted = false;
     private boolean mManualStop = false;
     MainActivity mActivity;
+    private String mReceivedString;
 
     SettingsClient(int port, MainActivity activity) {
         mPort = port;
@@ -42,9 +41,18 @@ public class SettingsClient {static final String TAG = "SettingsClient";
             protected Void doInBackground(Void... params)
             {
                 Log.d(TAG,"Started listening for settings");
-                while (!isCancelled())
+                while (!isCancelled()) {
                     listenOnSocket();
+                    publishProgress();
+                }
                 return null;
+            }
+
+            @Override
+            protected void onProgressUpdate(Void... values) {
+                if(mReceivedString != null)
+                    mActivity.parseSettingsInput(mReceivedString);
+                super.onProgressUpdate(values);
             }
 
             protected void onPostExecute(Void result)
@@ -65,8 +73,10 @@ public class SettingsClient {static final String TAG = "SettingsClient";
         if(async_client != null) {
             async_client.cancel(true);
             try {
-                mSocket.close();
-                mServerSocket.close();
+                if(mSocket != null)
+                    mSocket.close();
+                if(mServerSocket != null)
+                    mServerSocket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -83,23 +93,24 @@ public class SettingsClient {static final String TAG = "SettingsClient";
             DataInputStream in = new DataInputStream(mSocket.getInputStream());
 
             //Read settings from client
-            String recv = in.readUTF();
-            Log.d(TAG,"Settings received: " + recv);
-            //Broadcast received data
-            Intent notifyActivity = new Intent(MainActivity.SETTINGS_RECEIVED);
-            notifyActivity.putExtra(MainActivity.SETTINGS_RECEIVED_KEY, recv);
-            LocalBroadcastManager.getInstance(mActivity.getApplicationContext()).sendBroadcast(notifyActivity);
+            mReceivedString = in.readUTF();
+            Log.d(TAG,"Settings received: " + mReceivedString);
 
             //Write ACK
-            out.writeUTF("ACK");
+            out.writeUTF(CMD_ACK);
 
         } catch (Exception e) {
-            mSettinsTransmitted = false;
-            Log.e(TAG, "Error occurred while sending settings ");
-            e.printStackTrace();
+            if(!mManualStop) {
+                mSettinsTransmitted = false;
+                Log.e(TAG, "Error occurred while sending settings ");
+                e.printStackTrace();
+            } else {
+                Log.d(TAG,"Socket on port: " + mPort + " closed manually");
+            }
         } finally {
             try{
                 mSocket.close();
+                mServerSocket.close();
             }catch (IOException e){
                 Log.d(TAG, "Error closing socket on port " + mPort );
                 e.printStackTrace();

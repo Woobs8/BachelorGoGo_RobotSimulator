@@ -1,5 +1,6 @@
 package bachelorgogo.com.robotsimulator;
 
+import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -34,9 +35,18 @@ public class ReceiveCommandsClient {
             protected Void doInBackground(Void... params)
             {
                 Log.d(TAG,"Started listening for robot status messages");
-                while (!isCancelled())
+                while (!isCancelled()) {
                     listenOnSocket();
+                    publishProgress();
+                }
                 return null;
+            }
+
+            @Override
+            protected void onProgressUpdate(Void... values) {
+                if(mReceivedString != null)
+                    mActivity.parseControlInput(mReceivedString);
+                super.onProgressUpdate(values);
             }
 
             protected void onPostExecute(Void result)
@@ -81,11 +91,6 @@ public class ReceiveCommandsClient {
             mDatagramSocket.receive(recv_packet);
             mReceivedString = new String(recv_packet.getData());
             Log.d(TAG, "Received command: " + mReceivedString);
-
-            //Broadcast received data
-            Intent notifyActivity = new Intent(MainActivity.CONTROL_INPUT_RECEIVED);
-            notifyActivity.putExtra(MainActivity.CONTROL_INPUT_RECEIVED_KEY, mReceivedString);
-            LocalBroadcastManager.getInstance(mActivity.getApplicationContext()).sendBroadcast(notifyActivity);
         } catch (Exception e) {
             if(!mManualStop) {
                 Log.e(TAG, "Error occurred while listening on port " + mPort);
@@ -93,6 +98,8 @@ public class ReceiveCommandsClient {
             } else {
                 Log.d(TAG,"Socket on port " + mPort + " closed manually");
             }
+        } catch (OutOfMemoryError me) {
+            Log.d(TAG,"Out of memory, received data ignored");
         } finally {
             Log.d(TAG,"Closing socket on port " + mPort);
             if (mDatagramSocket != null)
