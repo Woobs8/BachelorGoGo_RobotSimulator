@@ -61,7 +61,9 @@ public class MainActivity extends AppCompatActivity {
     SeekBar batteryCharge_sb;
     Switch cameraAvailability_sw;
     TextView xCoord_txt;
+    TextView xCoord_header;
     TextView yCoord_txt;
+    TextView yCoord_header;
     TextView deviceName_txt;
     TextView videoSettings_txt;
     TextView powerMode_txt;
@@ -83,6 +85,8 @@ public class MainActivity extends AppCompatActivity {
     private String mVideoSettings = "";
     private String mPowerSaveMode = "";
     private String mAssistedDrivingMode = "";
+    private String mMemRemaining = "1TB";
+    private String mMemSpace = "200TB";
     private int mBatteryLevel = 100;
     private boolean mCameraAvailable = false;
     private boolean mWiFiDirectEnabled = false;
@@ -113,6 +117,8 @@ public class MainActivity extends AppCompatActivity {
         updateStatus_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                String sendString = RobotProtocol.getDataBroadcastString(mDeviceName,Integer.toString(mBatteryLevel),mMemSpace,mMemRemaining,(mCameraAvailable==true ? TRUE : FALSE));
+                mRobotStatusClient.sendCommand(sendString);
 
             }
         });
@@ -160,6 +166,8 @@ public class MainActivity extends AppCompatActivity {
 
         xCoord_txt = (TextView) findViewById(R.id.x_coord_txt);
         yCoord_txt = (TextView) findViewById(R.id.y_coord_txt);
+        xCoord_header = (TextView) findViewById(R.id.coordinate_x_header);
+        yCoord_header = (TextView) findViewById(R.id.coordinate_y_header);
         deviceName_txt = (TextView) findViewById(R.id.device_name_txt);
         videoSettings_txt = (TextView) findViewById(R.id.video_settings_txt);
         powerMode_txt = (TextView) findViewById(R.id.power_save_mode_txt);
@@ -254,44 +262,66 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private void parseControlInput(String cmd) {
-        if(cmd.contains(STEERING_XY_COORDINATE)) {
+        if(cmd.contains(CMD_CONTROL)) {
             cmd.substring(cmd.indexOf("*") + 2);
-            String segmentedCMD[] = cmd.split(";");
-            Log.d(TAG,"Setting x,y coordinates");
-            xCoord_txt.setText(segmentedCMD[0]);
-            yCoord_txt.setText(segmentedCMD[1]);
+
+            String mSegmentedRawData[] = cmd.split(";");
+
+            for(int i = 0; i < mSegmentedRawData.length; i++) {
+                String tempDataSegment[] = mSegmentedRawData[i].split(":");
+                switch (tempDataSegment[0]) {
+                    case STEERING_X_COORDINATE_TAG:
+                        Log.d(TAG, "Setting x coordinate");
+                        xCoord_txt.setText(tempDataSegment[1]);
+                        break;
+                    case STEERING_Y_COORDINATE_TAG:
+                        Log.d(TAG, "Setting y coordinate");
+                        yCoord_txt.setText(tempDataSegment[1]);
+                        break;
+                    case STEERING_POWER_TAG:
+                        Log.d(TAG, "Setting power coordinate");
+                        xCoord_header.setText("Power:");
+                        xCoord_txt.setText(tempDataSegment[1]);
+                        break;
+                    case SEERING_ANGLE_TAG:
+                        Log.d(TAG, "Setting angle coordinate");
+                        yCoord_header.setText("Power:");
+                        yCoord_txt.setText(tempDataSegment[1]);
+                        break;
+                }
+
+            }
         } else {
             Log.d(TAG,"Unknown control packet");
         }
     }
 
     private void parseSettingsInput(String settings) {
-        settings.substring(settings.indexOf("*")+2);
+        if(settings.contains(CMD_SETTINGS)) {
+            settings.substring(settings.indexOf("*") + 2);
 
-        String segmentedSettings[] = settings.split(";");
+            String segmentedSettings[] = settings.split(";");
 
-        for(int i = 0; i < segmentedSettings.length; i++){
-            String tempDataSegment[] = segmentedSettings[i].split(":");
-            switch (tempDataSegment[0]){
-                case CAR_NAME_TAG :
-                    carName = tempDataSegment[1];
-                    break;
-                case BATTERY_TAG :
-                    batteryPercentage = Integer.parseInt(tempDataSegment[1]);
-                    break;
-                case MAC_TAG :
-                    macAddr = tempDataSegment[1];
-                    break;
-                case CAMERA_TAG :
-                    cameraAvailable = (tempDataSegment[1] == "1") ? true : false;
-                    break;
-                case STORAGE_SPACE_TAG :
-                    storageSpace = tempDataSegment[1];
-                    break;
-                case STORAGE_REMAINING :
-                    storageRemaining = tempDataSegment[1];
-                    break;
+            for (int i = 0; i < segmentedSettings.length; i++) {
+                String tempDataSegment[] = segmentedSettings[i].split(":");
+                switch (tempDataSegment[0]) {
+                    case CAR_NAME_TAG:
+                        deviceName_txt.setText(tempDataSegment[1]);
+                        break;
+                    case CAMERA_VIDEO_QUALITY:
+                        videoSettings_txt.setText(tempDataSegment[1]);
+                        break;
+                    case POWER_SAVE_DRIVE_MODE_TAG:
+                        powerMode_txt.setText(tempDataSegment[1]);
+                        break;
+                    case ASSERTED_DRIVE_MODE_TAG:
+                        assistedDrivingMode_txt.setText(tempDataSegment[1]);
+                        break;
+                }
             }
+        }
+        else {
+            Log.d(TAG,"Unknown control packet");
         }
     }
 
