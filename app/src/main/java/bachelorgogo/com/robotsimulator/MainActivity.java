@@ -8,11 +8,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.NetworkInfo;
+import android.net.wifi.p2p.WifiP2pGroup;
 import android.net.wifi.p2p.WifiP2pInfo;
 import android.net.wifi.p2p.WifiP2pManager;
 import android.net.wifi.p2p.nsd.WifiP2pDnsSdServiceInfo;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.SystemClock;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
@@ -29,6 +31,8 @@ import android.widget.TextView;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -64,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
     TextView powerMode_txt;
     TextView assistedDrivingMode_txt;
     TextView connectStatus_txt;
+    Button disconnect_btn;
 
     InetAddress mDeviceAddress;
     ServerSocket mServerSocket;
@@ -86,7 +91,7 @@ public class MainActivity extends AppCompatActivity {
     private boolean mWiFiDirectEnabled = false;
     private boolean mConnected = false;
     private boolean mDiscoverPeers = false;
-    private int mAvailableStorage;
+    private int mAvailableStorage = 200;
 
     ReceiveCommandsClient mControlCommandClient;
     SendStatusClient mRobotStatusClient;
@@ -112,13 +117,22 @@ public class MainActivity extends AppCompatActivity {
         updateStatus_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String sendString = RobotProtocol.getDataBroadcastString(mDeviceName,Integer.toString(mBatteryLevel), mStorageCapacity,Integer.toString(mAvailableStorage),(mCameraAvailable==true ? TRUE : FALSE));
+                String sendString = RobotProtocol.getDataBroadcastString(mDeviceName,Integer.toString(mBatteryLevel), mStorageCapacity,Integer.toString(mAvailableStorage)+"MB",(mCameraAvailable==true ? TRUE : FALSE));
                 mRobotStatusClient.sendCommand(sendString);
                 Log.d(TAG,sendString);
 
             }
         });
         updateStatus_btn.setEnabled(false);
+
+        disconnect_btn = (Button) findViewById(R.id.disconnect_btn);
+        disconnect_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                removeWiFiDirectGroup();
+            }
+        });
+        disconnect_btn.setEnabled(false);
 
         customCmd_field = (EditText) findViewById(R.id.custom_cmd_field);
         customCmd_field.addTextChangedListener(new TextWatcher() {
@@ -206,8 +220,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        mManager.cancelConnect(mChannel,null);
-        mManager.removeGroup(mChannel,null);
+        removeWiFiDirectGroup();
         mControlCommandClient.stop();
         super.onDestroy();
     }
@@ -352,6 +365,7 @@ public class MainActivity extends AppCompatActivity {
         connectStatus_txt.setText(mDeviceAddress.toString() + " (" + mHostPort + ")");
         sendCustomCmd_btn.setEnabled(true);
         updateStatus_btn.setEnabled(true);
+        disconnect_btn.setEnabled(true);
         mDiscoverPeers = false;
     }
 
@@ -360,6 +374,7 @@ public class MainActivity extends AppCompatActivity {
         connectStatus_txt.setText("Waiting for connection...");
         sendCustomCmd_btn.setEnabled(false);
         updateStatus_btn.setEnabled(false);
+        disconnect_btn.setEnabled(false);
 
         if(mControlCommandClient != null) {
             mControlCommandClient.stop();
@@ -369,6 +384,56 @@ public class MainActivity extends AppCompatActivity {
         }
         mDiscoverPeers = true;
         discoverPeers();
+    }
+
+    private void removeWiFiDirectGroup() {
+        Log.d(TAG,"Removing WiFi Direct group");
+        mManager.requestGroupInfo(mChannel, new WifiP2pManager.GroupInfoListener() {
+            @Override
+            public void onGroupInfoAvailable(final WifiP2pGroup group) {
+                Log.d(TAG,"onGroupInfoAvailable called");
+                mManager.removeGroup(mChannel, new WifiP2pManager.ActionListener() {
+                    @Override
+                    public void onSuccess() {
+                        Log.d(TAG,"removeGroup successfully called");
+                        deletePersistentGroup(group);
+                    }
+
+                    @Override
+                    public void onFailure(int reason) {
+                        Log.d(TAG,"Error calling removeGroup");
+                    }
+                });
+            }
+        });
+    }
+
+    // @http://stackoverflow.com/questions/23653707/forgetting-old-wifi-direct-connections
+    private void deletePersistentGroup(WifiP2pGroup wifiP2pGroup) {
+        try {
+
+            Method getNetworkId = WifiP2pGroup.class.getMethod("getNetworkId");
+            Integer networkId = (Integer) getNetworkId.invoke(wifiP2pGroup);
+            Method deletePersistentGroup = WifiP2pManager.class.getMethod("deletePersistentGroup",
+                    WifiP2pManager.Channel.class, int.class, WifiP2pManager.ActionListener.class);
+            deletePersistentGroup.invoke(mManager, mChannel, networkId, new WifiP2pManager.ActionListener() {
+                @Override
+                public void onSuccess() {
+                    Log.e(TAG, "deletePersistentGroup onSuccess");
+                }
+
+                @Override
+                public void onFailure(int reason) {
+                    Log.e(TAG, "deletePersistentGroup failure: " + reason);
+                }
+            });
+        } catch (NoSuchMethodException e) {
+            Log.e("WIFI", "Could not delete persistent group", e);
+        } catch (InvocationTargetException e) {
+            Log.e("WIFI", "Could not delete persistent group", e);
+        } catch (IllegalAccessException e) {
+            Log.e("WIFI", "Could not delete persistent group", e);
+        }
     }
 
     private void startRegistration() {
@@ -467,12 +532,10 @@ public class MainActivity extends AppCompatActivity {
 
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
-                                                    connectionLost();
                                                     mConnected = false;
                                                 } catch (IOException e) {
                                                     Log.e(TAG, "Error listening for client IPs");
                                                     e.printStackTrace();
-                                                    connectionLost();
                                                     mConnected = false;
                                                 } finally {
                                                     try {
@@ -488,7 +551,7 @@ public class MainActivity extends AppCompatActivity {
                                                     if(!mConnected) {
                                                         Log.d(TAG,"Error establishing connection to client. Closing Wifi Direct Group");
                                                         mManager.cancelConnect(mChannel,null);
-                                                        mManager.removeGroup(mChannel,null);
+                                                        removeWiFiDirectGroup();
                                                     }
                                                 }
                                                 return null;
@@ -497,6 +560,13 @@ public class MainActivity extends AppCompatActivity {
                                             @Override
                                             protected void onProgressUpdate(Void... values) {
                                                 connectionEstablished();
+                                            }
+
+                                            @Override
+                                            protected void onPostExecute(Void aVoid) {
+                                                if(!mConnected)
+                                                    connectionLost();
+                                                super.onPostExecute(aVoid);
                                             }
                                         };
 
@@ -507,7 +577,6 @@ public class MainActivity extends AppCompatActivity {
                                             async_client.execute((Void[]) null);
                                     } else {
                                         mDeviceAddress = info.groupOwnerAddress;
-                                        Log.d(TAG, "host resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
                                         //transmit ip to group owner and exchange ports
                                         AsyncTask<Void, Void, Void> async_transmit_ip = new AsyncTask<Void, Void, Void>() {
                                             @Override
@@ -516,6 +585,7 @@ public class MainActivity extends AppCompatActivity {
                                                     mSocket = new Socket();
                                                     mSocket.setSoTimeout(mEstablishConnectionTimeout);
                                                     mSocket.bind(null);
+                                                    SystemClock.sleep(100);
                                                     mSocket.connect((new InetSocketAddress(mDeviceAddress, mGroupOwnerPort)));
                                                     DataInputStream in = new DataInputStream(mSocket.getInputStream());
                                                     DataOutputStream out = new DataOutputStream(mSocket.getOutputStream());
@@ -531,15 +601,15 @@ public class MainActivity extends AppCompatActivity {
                                                     int hostPort = Integer.valueOf(dataStr);
                                                     if (hostPort > 0 && hostPort < 9999)
                                                         mHostPort = hostPort;
+                                                    Log.d(TAG, "host resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
+                                                    publishProgress();
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
                                                     mConnected = false;
-                                                    connectionLost();
                                                 } catch (IOException e) {
                                                     Log.e(TAG, "Error connecting to group owner");
                                                     e.printStackTrace();
                                                     mConnected = false;
-                                                    connectionLost();
                                                 } finally {
                                                     try {
                                                         if (mSocket != null)
@@ -553,10 +623,22 @@ public class MainActivity extends AppCompatActivity {
                                                     if(!mConnected) {
                                                         Log.d(TAG,"Error establishing connection to client. Closing Wifi Direct Group");
                                                         mManager.cancelConnect(mChannel,null);
-                                                        mManager.removeGroup(mChannel,null);
+                                                        removeWiFiDirectGroup();
                                                     }
                                                 }
                                                 return null;
+                                            }
+
+                                            @Override
+                                            protected void onProgressUpdate(Void... values) {
+                                                connectionEstablished();
+                                            }
+
+                                            @Override
+                                            protected void onPostExecute(Void aVoid) {
+                                                if(!mConnected)
+                                                    connectionLost();
+                                                super.onPostExecute(aVoid);
                                             }
                                         };
                                         // http://stackoverflow.com/questions/9119627/android-sdk-asynctask-doinbackground-not-running-subclass

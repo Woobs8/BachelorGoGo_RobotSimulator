@@ -233,28 +233,6 @@
         android:layout_marginTop="13dp"
         android:id="@+id/avaialble_storage_header" />
 
-    <SeekBar
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerVertical="true"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:id="@+id/available_storage_sb"
-        android:layout_alignRight="@+id/battery_status_sb"
-        android:layout_alignEnd="@+id/battery_status_sb"
-        android:max="250"
-        android:progress="200" />
-
-    <TextView
-        android:text="Received"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/textView5"
-        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-        android:layout_below="@+id/update_status_btn"
-        android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true" />
-
     <TextView
         android:text="Waiting for connection..."
         android:layout_width="wrap_content"
@@ -265,5 +243,36 @@
         android:layout_alignParentTop="true"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
+
+    <SeekBar
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/available_storage_sb"
+        android:max="250"
+        android:progress="200"
+        android:layout_below="@+id/avaialble_storage_header"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_alignRight="@+id/battery_status_sb"
+        android:layout_alignEnd="@+id/battery_status_sb" />
+
+    <TextView
+        android:text="Received"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/textView5"
+        android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+        android:layout_alignBaseline="@+id/update_status_btn"
+        android:layout_alignBottom="@+id/update_status_btn"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true" />
+
+    <Button
+        android:text="Disconnect"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:id="@+id/disconnect_btn" />
 
 </RelativeLayout>
