@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
     private int mHostPort = -1;
     private int mEstablishConnectionTimeout = 5000; //5 sec * 1000 msec
 
-    private final String mSystemName = "GiantsFTW";
+    private final String mSystemName = "RoboGoGo";
     private String mDeviceName = "RoboGoGo";
     private String mCustomCmd;
     private String mStorageCapacity = "250MB";
