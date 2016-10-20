@@ -76,15 +76,13 @@ public class MainActivity extends AppCompatActivity {
     private int mGroupOwnerPort = 9999;
     private int mLocalUDPPort = 4998;
     private int mLocalTCPPort = 4997;
+    private int mLocalHTTPPort = 4996;
     private int mHostPort = -1;
     private int mEstablishConnectionTimeout = 5000; //5 sec * 1000 msec
 
     private final String mSystemName = "GiantsFTW";
     private String mDeviceName = "RoboGoGo";
     private String mCustomCmd;
-    private String mVideoSettings = "";
-    private String mPowerSaveMode = "";
-    private String mAssistedDrivingMode = "";
     private String mStorageCapacity = "250MB";
     private int mBatteryLevel = 100;
     private boolean mCameraAvailable = false;
@@ -92,10 +90,12 @@ public class MainActivity extends AppCompatActivity {
     private boolean mConnected = false;
     private boolean mDiscoverPeers = false;
     private int mAvailableStorage = 200;
+    private int mVideoSettings = 1;
 
     ReceiveCommandsClient mControlCommandClient;
     SendStatusClient mRobotStatusClient;
     SettingsClient mSettingsClient;
+    HttpVideoStreamingServer mVideoServer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -213,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
         mWiFiDirectIntentFilter.addAction(WifiP2pManager.WIFI_P2P_THIS_DEVICE_CHANGED_ACTION);
 
         mControlCommandClient = new ReceiveCommandsClient(mLocalUDPPort, this);
-
+        mVideoServer = new HttpVideoStreamingServer(mLocalHTTPPort);
         discoverPeers();
         Log.d(TAG, "onCreate: Exiting onCreate");
     }
@@ -229,7 +229,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         // Unregister since the activity is paused.
         unregisterReceiver(mReceiver);
-        //unregisterReceiver(mBroadcastReceiver);
         if(mManager != null)
             mManager.removeLocalService(mChannel, mServiceInfo, new WifiP2pManager.ActionListener() {
                 @Override
@@ -238,14 +237,13 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onFailure(int reason) {}
             });
+
         super.onPause();
     }
 
     @Override
     protected void onResume() {
         registerReceiver(mReceiver, mWiFiDirectIntentFilter);
-        //registerReceiver(mBroadcastReceiver, mLocalBroadcastIntentFilter);
-
         if(mManager != null)
             startRegistration();
         super.onResume();
@@ -319,14 +317,29 @@ public class MainActivity extends AppCompatActivity {
                     case CAMERA_VIDEO_QUALITY_TAG:
                         switch(tempDataSegment[1]) {
                             case "-1":
+                                mVideoSettings = 1;
                                 videoSettings_txt.setText(getString(R.string.video_quality_default));
                             case "1":
-                                videoSettings_txt.setText(getString(R.string.video_quality_0));
-                                break;
-                            case "2":
+                                mVideoSettings = 1;
                                 videoSettings_txt.setText(getString(R.string.video_quality_1));
                                 break;
+                            case "2":
+                                mVideoSettings = 2;
+                                videoSettings_txt.setText(getString(R.string.video_quality_2));
+                                break;
+                            case "3":
+                                mVideoSettings = 3;
+                                videoSettings_txt.setText(getString(R.string.video_quality_3));
+                                break;
+                            case "4":
+                                mVideoSettings = 4;
+                                videoSettings_txt.setText(getString(R.string.video_quality_4));
+                                break;
+                            default:
+                                mVideoSettings = 1;
+                                videoSettings_txt.setText(getString(R.string.video_quality_default));
                         }
+                        mVideoServer.setVideoSettings(mVideoSettings);
                         break;
                     case POWER_SAVE_DRIVE_MODE_TAG:
                         switch(tempDataSegment[1]) {
@@ -367,6 +380,11 @@ public class MainActivity extends AppCompatActivity {
         updateStatus_btn.setEnabled(true);
         disconnect_btn.setEnabled(true);
         mDiscoverPeers = false;
+        try {
+            mVideoServer.start();
+        } catch (IOException e) {
+            Log.d(TAG, "Error starting http video server");
+        }
     }
 
     private void connectionLost() {
@@ -383,6 +401,8 @@ public class MainActivity extends AppCompatActivity {
             mSettingsClient.stop();
         }
         mDiscoverPeers = true;
+
+        mVideoServer.stop();
         discoverPeers();
     }
 
@@ -530,6 +550,9 @@ public class MainActivity extends AppCompatActivity {
                                                     //Send TCP port to client
                                                     out.writeUTF(Integer.toString(mLocalTCPPort));
 
+                                                    //Send HTTP port to client
+                                                    out.writeUTF(Integer.toString(mLocalHTTPPort));
+
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
                                                     mConnected = false;
@@ -590,11 +613,14 @@ public class MainActivity extends AppCompatActivity {
                                                     DataInputStream in = new DataInputStream(mSocket.getInputStream());
                                                     DataOutputStream out = new DataOutputStream(mSocket.getOutputStream());
 
-                                                    //Send UDP port to server
+                                                    //Send UDP port to owner
                                                     out.writeUTF(Integer.toString(mLocalUDPPort));
 
-                                                    //Send TCP port to server
+                                                    //Send TCP port to owner
                                                     out.writeUTF(Integer.toString(mLocalTCPPort));
+
+                                                    //Send HTTP port to owner
+                                                    out.writeUTF(Integer.toString(mLocalHTTPPort));
 
                                                     //read server UDP port
                                                     String dataStr = in.readUTF();
