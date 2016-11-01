@@ -115,15 +115,6 @@
         android:id="@+id/assisted_driving_header" />
 
     <TextView
-        android:text="Device Name:"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/device_name_header"
-        android:layout_below="@+id/rcv_settings_header"
-        android:layout_alignRight="@+id/camera_availability_header"
-        android:layout_alignEnd="@+id/camera_availability_header" />
-
-    <TextView
         android:text="Video Settings:"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -133,7 +124,6 @@
         android:layout_alignStart="@+id/power_save_mode_header" />
 
     <TextView
-        android:text="placeholder"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/device_name_txt"
@@ -142,7 +132,6 @@
         android:id="@+id/video_settings_txt" />
 
     <TextView
-        android:text="placeholder"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/video_settings_txt"
@@ -151,7 +140,6 @@
         android:id="@+id/power_save_mode_txt" />
 
     <TextView
-        android:text="placeholder"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_alignBottom="@+id/assisted_driving_header"
@@ -160,25 +148,6 @@
         android:id="@+id/assisted_driving_txt" />
 
     <TextView
-        android:text="Y:"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/coordinate_y_header"
-        android:layout_below="@+id/coordinate_x_header"
-        android:layout_alignLeft="@+id/device_name_header"
-        android:layout_alignStart="@+id/device_name_header" />
-
-    <TextView
-        android:text="X:"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/coordinate_x_header"
-        android:layout_below="@+id/textView6"
-        android:layout_alignLeft="@+id/coordinate_y_header"
-        android:layout_alignStart="@+id/coordinate_y_header" />
-
-    <TextView
-        android:text="placeholder"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_below="@+id/x_coord_txt"
@@ -187,7 +156,6 @@
         android:id="@+id/y_coord_txt" />
 
     <TextView
-        android:text="placeholder"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:id="@+id/x_coord_txt"
@@ -203,15 +171,6 @@
         android:layout_below="@+id/connection_status_txt"
         android:layout_alignParentLeft="true"
         android:layout_alignParentStart="true" />
-
-    <TextView
-        android:text="placeholder"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:id="@+id/device_name_txt"
-        android:layout_above="@+id/video_settings_header"
-        android:layout_toRightOf="@+id/custom_cmd_field"
-        android:layout_toEndOf="@+id/custom_cmd_field" />
 
     <Button
         android:text="Update Status"
@@ -274,5 +233,42 @@
         android:layout_alignParentBottom="true"
         android:layout_centerHorizontal="true"
         android:id="@+id/disconnect_btn" />
+
+    <TextView
+        android:text="Device Name:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/device_name_header"
+        android:layout_below="@+id/rcv_settings_header"
+        android:layout_alignLeft="@+id/coordinate_y_header"
+        android:layout_alignStart="@+id/coordinate_y_header" />
+
+    <TextView
+        android:text="X:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/coordinate_x_header"
+        android:layout_below="@+id/textView6"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentStart="true"
+        android:layout_marginLeft="14dp"
+        android:layout_marginStart="14dp" />
+
+    <TextView
+        android:text="Y:"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/coordinate_y_header"
+        android:layout_below="@+id/coordinate_x_header"
+        android:layout_alignRight="@+id/coordinate_x_header"
+        android:layout_alignEnd="@+id/coordinate_x_header" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/device_name_txt"
+        android:layout_above="@+id/video_settings_header"
+        android:layout_alignRight="@+id/connection_status_txt"
+        android:layout_alignEnd="@+id/connection_status_txt" />
 
 </RelativeLayout>
