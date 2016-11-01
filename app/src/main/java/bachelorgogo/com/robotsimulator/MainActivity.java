@@ -43,9 +43,8 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = "RobotSimulator";
-    static public final String SETTINGS_RECEIVED = "settings_received";
-    static public final String SETTINGS_RECEIVED_KEY = "settings_received_key";
 
+    //WifiP2P related
     WifiP2pManager mManager;
     WifiP2pManager.Channel mChannel;
     BroadcastReceiver mReceiver;
@@ -70,6 +69,7 @@ public class MainActivity extends AppCompatActivity {
     TextView connectStatus_txt;
     Button disconnect_btn;
 
+    //Networking related
     InetAddress mDeviceAddress;
     ServerSocket mServerSocket;
     Socket mSocket;
@@ -80,22 +80,31 @@ public class MainActivity extends AppCompatActivity {
     private int mHostPort = -1;
     private int mEstablishConnectionTimeout = 5000; //5 sec * 1000 msec
 
+    //Network clients
+    ReceiveCommandsClient mControlCommandClient;
+    SendStatusClient mRobotStatusClient;
+    SettingsClient mSettingsClient;
+    HttpVideoStreamingServer mVideoServer;
+
+    // System defines
     private final String mSystemName = "RoboGoGo";
+    private final String SYSTEM_IDENTIFICATION_STRING = "BachelorGoGo";
+    private final String SYSTEM_IDENTIFICATION_SEPARATOR = "*";
+
+    // Simulator variables
     private String mDeviceName = "RoboGoGo";
     private String mCustomCmd;
     private String mStorageCapacity = "250MB";
     private int mBatteryLevel = 100;
     private boolean mCameraAvailable = false;
+    private int mVideoSettings = 1;
+    private int mAvailableStorage = 200;
+
+
+    //flags
     private boolean mWiFiDirectEnabled = false;
     private boolean mConnected = false;
     private boolean mDiscoverPeers = false;
-    private int mAvailableStorage = 200;
-    private int mVideoSettings = 1;
-
-    ReceiveCommandsClient mControlCommandClient;
-    SendStatusClient mRobotStatusClient;
-    SettingsClient mSettingsClient;
-    HttpVideoStreamingServer mVideoServer;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -250,7 +259,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void discoverPeers() {
-        setDeviceName(mDeviceName);
+        setDeviceName(SYSTEM_IDENTIFICATION_STRING + SYSTEM_IDENTIFICATION_SEPARATOR + mDeviceName);
         mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
