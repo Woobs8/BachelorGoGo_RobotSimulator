@@ -252,6 +252,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void discoverPeers() {
+        setDeviceName(mDeviceName);
         mManager.discoverPeers(mChannel, new WifiP2pManager.ActionListener() {
             @Override
             public void onSuccess() {
@@ -406,6 +407,46 @@ public class MainActivity extends AppCompatActivity {
                 });
             }
         });
+    }
+
+    // Set Wi-Fi Direct device name
+    // @http://stackoverflow.com/questions/24851961/how-change-the-device-name-in-wifi-direct-p2p
+    public void setDeviceName(String devName) {
+        try {
+            Class[] paramTypes = new Class[3];
+            paramTypes[0] = WifiP2pManager.Channel.class;
+            paramTypes[1] = String.class;
+            paramTypes[2] = WifiP2pManager.ActionListener.class;
+            Method setDeviceName = mManager.getClass().getMethod(
+                    "setDeviceName", paramTypes);
+            setDeviceName.setAccessible(true);
+
+            Object arglist[] = new Object[3];
+            arglist[0] = mChannel;
+            arglist[1] = devName;
+            arglist[2] = new WifiP2pManager.ActionListener() {
+
+                @Override
+                public void onSuccess() {
+                    Log.d("setDeviceName succeeded", "true");
+                }
+
+                @Override
+                public void onFailure(int reason) {
+                    Log.d("setDeviceName failed", "true");
+                }
+            };
+            setDeviceName.invoke(mManager, arglist);
+
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (IllegalArgumentException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
     }
 
     // @http://stackoverflow.com/questions/23653707/forgetting-old-wifi-direct-connections
