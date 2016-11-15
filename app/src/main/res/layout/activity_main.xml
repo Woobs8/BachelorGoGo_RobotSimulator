@@ -268,7 +268,7 @@
         android:layout_height="wrap_content"
         android:id="@+id/device_name_txt"
         android:layout_above="@+id/video_settings_header"
-        android:layout_alignRight="@+id/connection_status_txt"
-        android:layout_alignEnd="@+id/connection_status_txt" />
+        android:layout_alignLeft="@+id/update_status_btn"
+        android:layout_alignStart="@+id/update_status_btn" />
 
 </RelativeLayout>

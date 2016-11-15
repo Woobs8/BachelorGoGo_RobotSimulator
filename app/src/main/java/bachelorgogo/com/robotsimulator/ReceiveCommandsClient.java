@@ -13,13 +13,13 @@ import java.nio.ByteBuffer;
 
 public class ReceiveCommandsClient {
     private final String TAG = "ReceiveCommandsClient";
-    private int mPacketSize;
     private int mPort;
     private String mReceivedString;
     private DatagramSocket mDatagramSocket;
     private AsyncTask<Void, Void, Void> async_client;
     private boolean mManualStop;
     private MainActivity mActivity;
+    private final int mPacketSize = 255;
 
     ReceiveCommandsClient(int port, MainActivity activity) {
         mPort = port;
@@ -75,16 +75,7 @@ public class ReceiveCommandsClient {
         try {
             Log.d(TAG,"Opening socket on port " + mPort);
             mDatagramSocket = new DatagramSocket(mPort);
-            byte[] packetSizeData = new byte[4];    //Max size = 2^32
 
-            //First read size of packet...
-            DatagramPacket size_packet = new DatagramPacket(packetSizeData, packetSizeData.length);
-            mDatagramSocket.receive(size_packet);
-            ByteBuffer sizeBuffer = ByteBuffer.wrap(size_packet.getData()); // big-endian by default
-            mPacketSize = sizeBuffer.getInt();
-            Log.d(TAG,"Receiving packet of size: " + mPacketSize);
-
-            //...Then the actual packet
             byte[] receiveData = new byte[mPacketSize];
             DatagramPacket recv_packet = new DatagramPacket(receiveData, receiveData.length);
             Log.d(TAG, "Receiving data");

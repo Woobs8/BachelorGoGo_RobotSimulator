@@ -8,6 +8,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 /**
  * Created by THP on 04-10-2016.
@@ -20,6 +21,7 @@ public class SendStatusClient {
     private String mCommand;
     private DatagramSocket mDatagramSocket;
     private AsyncTask<Void, Void, Void> async_client;
+    private int mPacketSize = 255;
 
     SendStatusClient(InetAddress host, int port) {
         mHostAddress = host;
@@ -37,20 +39,14 @@ public class SendStatusClient {
             {
                 try
                 {
-                    if(mCommand.length() <= (Math.pow(2,32)-1)) {
+                    if(mCommand.length() <= mPacketSize) {
                         mDatagramSocket = new DatagramSocket();
 
-                        //First send packet size...
-                        ByteBuffer dbuf = ByteBuffer.allocate(4);   //max packet size = 2^32
-                        dbuf.putInt(mCommand.length());
-                        byte[] size = dbuf.array();
-                        DatagramPacket sizePacket = new DatagramPacket(size, size.length, mHostAddress, mPort);
-                        mDatagramSocket.send(sizePacket);
-
-                        //Then the actual packet
-                        Log.d(TAG, "Sending command: " + mCommand);
+                        byte[] packet = new byte[mPacketSize];
+                        Arrays.fill( packet, (byte) 0 );
                         byte[] message = mCommand.getBytes();
-                        DatagramPacket dp = new DatagramPacket(message, message.length, mHostAddress, mPort);
+                        System.arraycopy(message,0,packet,0,message.length);
+                        DatagramPacket dp = new DatagramPacket(packet, packet.length, mHostAddress, mPort);
                         mDatagramSocket.send(dp);
                     }
                 }

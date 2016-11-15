@@ -14,6 +14,8 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.Arrays;
+
 import static bachelorgogo.com.robotsimulator.RobotProtocol.SEND_COMMANDS.*;
 import static bachelorgogo.com.robotsimulator.RobotProtocol.DATA_TAGS.*;
 
@@ -27,6 +29,7 @@ public class SettingsClient {static final String TAG = "SettingsClient";
     private boolean mManualStop = false;
     MainActivity mActivity;
     private String mReceivedString;
+    private int mPacketSize = 255;
 
     SettingsClient(int port, MainActivity activity) {
         mPort = port;
@@ -93,11 +96,17 @@ public class SettingsClient {static final String TAG = "SettingsClient";
             DataInputStream in = new DataInputStream(mSocket.getInputStream());
 
             //Read settings from client
-            mReceivedString = in.readUTF();
+            byte[] rcv = new byte[mPacketSize];
+            in.read(rcv);
+            mReceivedString = new String(rcv);
             Log.d(TAG,"Settings received: " + mReceivedString);
 
             //Write ACK
-            out.writeUTF(CMD_ACK);
+            byte[] packet = new byte[mPacketSize];
+            Arrays.fill(packet, (byte) 0);
+            byte[] message = CMD_ACK.getBytes();
+            System.arraycopy(message, 0, packet, 0, message.length);
+            out.write(packet);
 
         } catch (Exception e) {
             if(!mManualStop) {

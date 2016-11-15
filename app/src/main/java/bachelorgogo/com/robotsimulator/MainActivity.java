@@ -92,7 +92,7 @@ public class MainActivity extends AppCompatActivity {
     private final String SYSTEM_IDENTIFICATION_SEPARATOR = "*";
 
     // Simulator variables
-    private String mDeviceName = "RoboGoGo";
+    private String mDeviceName = "RoboGoGOSimulator";
     private String mCustomCmd;
     private String mStorageCapacity = "250MB";
     private int mBatteryLevel = 100;
@@ -275,15 +275,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void parseControlInput(String cmd) {
         if(cmd.contains(CMD_CONTROL)) {
-            cmd = cmd.substring(cmd.indexOf("*") + 3);
+            cmd = cmd.substring(cmd.indexOf("*") + 4);
 
             String mSegmentedRawData[] = cmd.split(";");
 
-            for(int i = 0; i < mSegmentedRawData.length; i++) {
+            for(int i = 0; i < mSegmentedRawData.length; i++) {   //ignore last segment, as it is junk
                 String tempDataSegment[] = mSegmentedRawData[i].split(":");
-                Log.d(TAG,mSegmentedRawData[i]);
-                Log.d(TAG,tempDataSegment[0]);
-                Log.d(TAG,tempDataSegment[1]);
                 switch (tempDataSegment[0]) {
                     case STEERING_X_COORDINATE_TAG:
                         Log.d(TAG, "Setting x coordinate");
@@ -313,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void parseSettingsInput(String settings) {
         if(settings.contains(CMD_SETTINGS)) {
-            settings = settings.substring(settings.indexOf("*") + 3);
+            settings = settings.substring(settings.indexOf("*") + 4);
 
             String segmentedSettings[] = settings.split(";");
 
@@ -361,7 +358,7 @@ public class MainActivity extends AppCompatActivity {
                                 break;
                         }
                         break;
-                    case ASSERTED_DRIVE_MODE_TAG:
+                    case ASSISTED_DRIVE_MODE_TAG:
                         switch(tempDataSegment[1]) {
                             case "0":
                                 assistedDrivingMode_txt.setText(getString(R.string.setting_disabled));
@@ -587,7 +584,9 @@ public class MainActivity extends AppCompatActivity {
                                                     DataInputStream in = new DataInputStream(mSocket.getInputStream());
 
                                                     //read client port
-                                                    String dataStr = in.readUTF();
+                                                    byte[] rcv = new byte[4];
+                                                    in.read(rcv);
+                                                    String dataStr = new String(rcv);
                                                     int hostPort = Integer.valueOf(dataStr);
                                                     if (hostPort > 0 && hostPort < 9999)
                                                         mHostPort = hostPort;
@@ -595,13 +594,16 @@ public class MainActivity extends AppCompatActivity {
                                                     publishProgress();
 
                                                     //Send UDP port to client
-                                                    out.writeUTF(Integer.toString(mLocalUDPPort));
+                                                    byte[] send = Integer.toString(mLocalUDPPort).getBytes();
+                                                    out.write(send);
 
                                                     //Send TCP port to client
-                                                    out.writeUTF(Integer.toString(mLocalTCPPort));
+                                                    send = Integer.toString(mLocalTCPPort).getBytes();
+                                                    out.write(send);
 
                                                     //Send HTTP port to client
-                                                    out.writeUTF(Integer.toString(mLocalHTTPPort));
+                                                    send = Integer.toString(mLocalHTTPPort).getBytes();
+                                                    out.write(send);
 
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
@@ -664,16 +666,21 @@ public class MainActivity extends AppCompatActivity {
                                                     DataOutputStream out = new DataOutputStream(mSocket.getOutputStream());
 
                                                     //Send UDP port to owner
-                                                    out.writeUTF(Integer.toString(mLocalUDPPort));
+                                                    byte[] send = Integer.toString(mLocalUDPPort).getBytes();
+                                                    out.write(send);
 
                                                     //Send TCP port to owner
-                                                    out.writeUTF(Integer.toString(mLocalTCPPort));
+                                                    send = Integer.toString(mLocalTCPPort).getBytes();
+                                                    out.write(send);
 
                                                     //Send HTTP port to owner
-                                                    out.writeUTF(Integer.toString(mLocalHTTPPort));
+                                                    send = Integer.toString(mLocalHTTPPort).getBytes();
+                                                    out.write(send);
 
                                                     //read server UDP port
-                                                    String dataStr = in.readUTF();
+                                                    byte[] rcv = new byte[4];
+                                                    in.read(rcv);
+                                                    String dataStr = new String(rcv);
                                                     int hostPort = Integer.valueOf(dataStr);
                                                     if (hostPort > 0 && hostPort < 9999)
                                                         mHostPort = hostPort;
