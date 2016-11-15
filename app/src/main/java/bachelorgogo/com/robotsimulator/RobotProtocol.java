@@ -61,7 +61,7 @@ public final class RobotProtocol {
         public static final String STORAGE_SPACE_TAG = "Space";
         public static final String CAMERA_VIDEO_QUALITY_TAG = "VideoQuality";
         public static final String STORAGE_REMAINING_TAG = "Remaining";
-        public static final String ASSERTED_DRIVE_MODE_TAG = "Asserted";
+        public static final String ASSISTED_DRIVE_MODE_TAG = "Assisted";
         public static final String POWER_SAVE_DRIVE_MODE_TAG = "PowerMode";
         public static final String STEERING_X_COORDINATE_TAG = "X";
         public static final String STEERING_Y_COORDINATE_TAG = "Y";
@@ -78,6 +78,8 @@ public final class RobotProtocol {
         RobotProtocol protocol;
         // COMMAND INSERT
         String data = SEND_COMMANDS.CMD_STATUS;
+        data += SEND_COMMANDS.SPACING_BETWEEN_STRINGS;
+
         // CAR NAME INSERT
         data += DATA_TAGS.CAR_NAME_TAG + SEND_COMMANDS.SPACING_BETWEEN_TAG_AND_DATA+ carName;
         data += SEND_COMMANDS.SPACING_BETWEEN_STRINGS;
@@ -105,6 +107,7 @@ public final class RobotProtocol {
 
         // IP ADDRESS INSERT
         data += DATA_TAGS.IP_ADDRESS_TAG + SEND_COMMANDS.SPACING_BETWEEN_TAG_AND_DATA + ipAddress;
+        data += SEND_COMMANDS.SPACING_BETWEEN_STRINGS;
 
         return data;
     }
@@ -113,6 +116,8 @@ public final class RobotProtocol {
         RobotProtocol protocol;
         // COMMAND INSERT
         String data = SEND_COMMANDS.CMD_STATUS;
+        data += SEND_COMMANDS.SPACING_BETWEEN_STRINGS;
+
         // CAR NAME INSERT
         data += DATA_TAGS.CAR_NAME_TAG + SEND_COMMANDS.SPACING_BETWEEN_TAG_AND_DATA + carName;
         data += SEND_COMMANDS.SPACING_BETWEEN_STRINGS;
@@ -131,6 +136,7 @@ public final class RobotProtocol {
 
         // CAMERA INSERT
         data += DATA_TAGS.CAMERA_TAG + SEND_COMMANDS.SPACING_BETWEEN_TAG_AND_DATA + cameraAvailable;
+        data += SEND_COMMANDS.SPACING_BETWEEN_STRINGS;
 
         return data;
     }
