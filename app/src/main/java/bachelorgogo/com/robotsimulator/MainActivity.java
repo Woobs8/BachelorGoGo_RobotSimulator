@@ -79,6 +79,8 @@ public class MainActivity extends AppCompatActivity {
     private int mLocalHTTPPort = 4996;
     private int mHostPort = -1;
     private int mEstablishConnectionTimeout = 5000; //5 sec * 1000 msec
+    private int mPortPacketSize = 4;
+    private int mSettingsPacketSize = 255;
 
     //Network clients
     ReceiveCommandsClient mControlCommandClient;
@@ -92,13 +94,15 @@ public class MainActivity extends AppCompatActivity {
     private final String SYSTEM_IDENTIFICATION_SEPARATOR = "*";
 
     // Simulator variables
-    private String mDeviceName = "RoboGoGOSimulator";
+    private String mDeviceName = "RoboSim";
     private String mCustomCmd;
     private String mStorageCapacity = "250MB";
     private int mBatteryLevel = 100;
     private boolean mCameraAvailable = false;
     private int mVideoSettings = 1;
     private int mAvailableStorage = 200;
+    private boolean mPowerSaveMode = false;
+    private boolean mAssistedDrivingMode = false;
 
 
     //flags
@@ -351,9 +355,11 @@ public class MainActivity extends AppCompatActivity {
                     case POWER_SAVE_DRIVE_MODE_TAG:
                         switch(tempDataSegment[1]) {
                             case "0":
+                                mPowerSaveMode = false;
                                 powerMode_txt.setText(getString(R.string.setting_disabled));
                                 break;
                             case "1":
+                                mPowerSaveMode = true;
                                 powerMode_txt.setText(getString(R.string.setting_enabled));
                                 break;
                         }
@@ -361,9 +367,11 @@ public class MainActivity extends AppCompatActivity {
                     case ASSISTED_DRIVE_MODE_TAG:
                         switch(tempDataSegment[1]) {
                             case "0":
+                                mAssistedDrivingMode = false;
                                 assistedDrivingMode_txt.setText(getString(R.string.setting_disabled));
                                 break;
                             case "1":
+                                mAssistedDrivingMode = true;
                                 assistedDrivingMode_txt.setText(getString(R.string.setting_enabled));
                                 break;
                         }
@@ -605,6 +613,14 @@ public class MainActivity extends AppCompatActivity {
                                                     send = Integer.toString(mLocalHTTPPort).getBytes();
                                                     out.write(send);
 
+                                                    //Send settings to remote control
+                                                    SettingsObject settings = new SettingsObject(mDeviceName,
+                                                            Integer.toString(mVideoSettings),
+                                                            mPowerSaveMode,
+                                                            mAssistedDrivingMode);
+                                                    send = settings.getDataString().getBytes();
+                                                    out.write(send);
+
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
                                                     mConnected = false;
@@ -678,13 +694,22 @@ public class MainActivity extends AppCompatActivity {
                                                     out.write(send);
 
                                                     //read server UDP port
-                                                    byte[] rcv = new byte[4];
+                                                    byte[] rcv = new byte[mPortPacketSize];
                                                     in.read(rcv);
                                                     String dataStr = new String(rcv);
                                                     int hostPort = Integer.valueOf(dataStr);
                                                     if (hostPort > 0 && hostPort < 9999)
                                                         mHostPort = hostPort;
                                                     Log.d(TAG, "host resolved to: " + mDeviceAddress + " (port " + mHostPort + ")");
+
+                                                    //Send settings to remote control
+                                                    SettingsObject settings = new SettingsObject(mDeviceName,
+                                                                                                Integer.toString(mVideoSettings),
+                                                                                                mPowerSaveMode,
+                                                                                                mAssistedDrivingMode);
+                                                    send = settings.getDataString().getBytes();
+                                                    out.write(send);
+
                                                     publishProgress();
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
