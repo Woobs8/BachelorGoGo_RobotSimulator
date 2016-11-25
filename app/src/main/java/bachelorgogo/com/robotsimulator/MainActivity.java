@@ -613,6 +613,14 @@ public class MainActivity extends AppCompatActivity {
                                                     send = Integer.toString(mLocalHTTPPort).getBytes();
                                                     out.write(send);
 
+                                                    //Send settings to remote control
+                                                    SettingsObject settings = new SettingsObject(mDeviceName,
+                                                            Integer.toString(mVideoSettings),
+                                                            mPowerSaveMode,
+                                                            mAssistedDrivingMode);
+                                                    send = settings.getDataString().getBytes();
+                                                    out.write(send);
+
                                                 } catch (SocketTimeoutException st) {
                                                     Log.d(TAG,"Attempt to establish connection timed out");
                                                     mConnected = false;
